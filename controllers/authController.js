@@ -1,13 +1,38 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import Joi from 'joi';
 
 const JWT_SECRET = process.env.JWT_SECRET;
+
+// Schémas Joi
+const registerSchema = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string().min(6).max(128).required(),
+  username: Joi.string().min(2).max(50).optional()
+});
+const loginSchema = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string().min(6).max(128).required()
+});
+const updateProfileSchema = Joi.object({
+  username: Joi.string().min(2).max(50).optional(),
+  currentPassword: Joi.string().min(6).max(128).optional(),
+  newPassword: Joi.string().min(6).max(128).optional()
+});
+const deleteAccountSchema = Joi.object({
+  password: Joi.string().min(6).max(128).required(),
+  confirmText: Joi.string().valid('SUPPRIMER MON COMPTE').required()
+});
 
 // Inscription
 const register = async (req, res) => {
   try {
-    const { email, password, username } = req.body;
+    const { error, value } = registerSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+    const { email, password, username } = value;
 
     // Vérifier si l'utilisateur existe
     const existingUser = await User.findOne({ email });
@@ -49,7 +74,11 @@ const register = async (req, res) => {
 // Connexion
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { error, value } = loginSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+    const { email, password } = value;
 
     // Trouver l'utilisateur
     const user = await User.findOne({ email });
@@ -94,7 +123,11 @@ const getProfile = async (req, res) => {
 // Mettre à jour le profil
 const updateProfile = async (req, res) => {
   try {
-    const { username, currentPassword, newPassword } = req.body;
+    const { error, value } = updateProfileSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+    const { username, currentPassword, newPassword } = value;
     const userId = req.user.userId;
 
     // Trouver l'utilisateur
@@ -144,7 +177,11 @@ const updateProfile = async (req, res) => {
 // Supprimer son propre compte
 const deleteAccount = async (req, res) => {
   try {
-    const { password, confirmText } = req.body;
+    const { error, value } = deleteAccountSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+    const { password, confirmText } = value;
     const userId = req.user.userId;
 
     // Vérifications de sécurité

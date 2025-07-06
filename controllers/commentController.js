@@ -3,6 +3,15 @@ import Article from '../models/Article.js';
 import Review from '../models/Review.js';
 import Like from '../models/Like.js';
 import mongoose from 'mongoose';
+import Joi from 'joi';
+
+// Schéma Joi pour la validation d'un commentaire
+const commentSchema = Joi.object({
+  content: Joi.string().min(1).max(1000).required(),
+  articleId: Joi.string().optional(),
+  reviewId: Joi.string().optional(),
+  parentCommentId: Joi.string().optional()
+});
 
 // Récupérer les commentaires d'un article
 const getArticleComments = async (req, res) => {
@@ -356,18 +365,15 @@ const getReviewComments = async (req, res) => {
 // Ajouter un commentaire
 const createComment = async (req, res) => {
   try {
-    const { content, articleId, reviewId, parentCommentId } = req.body;
+    const { error, value } = commentSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+    const { content, articleId, reviewId, parentCommentId } = value;
     const userId = req.user.userId;
 
     // Validation
-    if (!content || content.trim().length === 0) {
-      return res.status(400).json({ message: 'Le contenu du commentaire est requis' });
-    }
-
-    if (content.length > 1000) {
-      return res.status(400).json({ message: 'Le commentaire ne peut pas dépasser 1000 caractères' });
-    }
-
+    
     // Il faut soit un articleId soit un reviewId
     if (!articleId && !reviewId) {
       return res.status(400).json({ message: 'ArticleId ou ReviewId requis' });

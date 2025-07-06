@@ -1,4 +1,16 @@
 import Article from '../models/Article.js';
+import Joi from 'joi';
+
+// Schéma Joi pour la validation d'un article
+const articleSchema = Joi.object({
+  title: Joi.string().min(3).max(200).required(),
+  slug: Joi.string().min(3).max(200).required(),
+  excerpt: Joi.string().allow('').max(500),
+  content: Joi.string().allow('').max(5000),
+  image: Joi.string().allow(''),
+  secondaryImage: Joi.string().allow(''),
+  readingTime: Joi.string().allow('')
+});
 
 // Récupérer tous les articles avec pagination
 const getArticles = async (req, res) => {
@@ -74,7 +86,11 @@ const getArticle = async (req, res) => {
 // Créer un article (Admin seulement)
 const createArticle = async (req, res) => {
   try {
-    const { title, slug, excerpt, content, image, secondaryImage, readingTime } = req.body;
+    const { error, value } = articleSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+    const { title, slug, excerpt, content, image, secondaryImage, readingTime } = value;
 
     const article = new Article({
       title,
@@ -106,7 +122,11 @@ const createArticle = async (req, res) => {
 // Modifier un article (Admin seulement)
 const updateArticle = async (req, res) => {
   try {
-    const { title, slug, excerpt, content, image, secondaryImage, readingTime } = req.body;
+    const { error, value } = articleSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+    const { title, slug, excerpt, content, image, secondaryImage, readingTime } = value;
     
     const article = await Article.findByIdAndUpdate(
       req.params.id,
